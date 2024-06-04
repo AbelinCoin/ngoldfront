@@ -4,6 +4,7 @@ import { Contract } from 'web3-eth-contract';
 import contractABI from './utils/pitufo.json';
 import contractABIStaking from './utils/staking.json';
 import contractABIOffer from './utils/offer.json';
+import usdtContractABI from './utils/usdt.json';
 import { useAccount } from 'wagmi';
 
 const useContracts = () => {
@@ -11,11 +12,13 @@ const useContracts = () => {
   const [contract, setContract] = useState<Contract | null>(null);
   const [offersContract, setOffersContract] = useState<Contract | null>(null);
   const [stakingContract, setStakingContract] = useState<Contract | null>(null);
+  const [usdtContract, setUsdtContract] = useState<Contract | null>(null);
   const { address } = useAccount();
 
   const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
   const contractAddressStaking = process.env.NEXT_PUBLIC_STAKING_CONTRACT_ADDRESS;
   const contractAddressOffer = process.env.NEXT_PUBLIC_OFFERS_CONTRACT_ADDRESS;
+  const usdtContractAddress = '0x66f45494f187Cf21cA5b6d0586e934EC38ff0bBB';
 
   useEffect(() => {
     if (window.ethereum && address) {
@@ -29,6 +32,9 @@ const useContracts = () => {
 
       const contractInstanceOffer = new web3Instance.eth.Contract(contractABIOffer, contractAddressOffer);
       setOffersContract(contractInstanceOffer);
+
+      const usdtInstance = new web3Instance.eth.Contract(usdtContractABI, usdtContractAddress);
+      setUsdtContract(usdtInstance);
     } else {
       console.error('Ethereum provider not found');
     }
@@ -174,7 +180,48 @@ const useContracts = () => {
     }
   };
 
- 
+  // Adding the new functions
+  const buyTokensFromDex = async (tokenAmount, usdtContractAddress, priceTokenPitufo) => {
+    if (contract && address) {
+      try {
+        const result = await contract.methods.buyTokensFromDex(tokenAmount, usdtContractAddress, priceTokenPitufo).send({ from: address });
+        return result;
+      } catch (error) {
+        console.error('Error buying tokens from DEX', error);
+        throw error;
+      }
+    } else {
+      throw new Error('Contract or account not available');
+    }
+  };
+
+  const sellTokensToDex = async (tokenAmount, totalPriceTokenPitufo, usdtContractAddress) => {
+    if (contract && address) {
+      try {
+        const result = await contract.methods.sellTokensToDex(tokenAmount, totalPriceTokenPitufo, usdtContractAddress).send({ from: address });
+        return result;
+      } catch (error) {
+        console.error('Error selling tokens to DEX', error);
+        throw error;
+      }
+    } else {
+      throw new Error('Contract or account not available');
+    }
+  };
+
+  const getUSDTBalance = async (account) => {
+    if (usdtContract) {
+      try {
+        const balance = await usdtContract.methods.balanceOf(account).call();
+        return balance.toString();
+      } catch (error) {
+        console.error('Error getting USDT balance', error);
+        throw error;
+      }
+    } else {
+      throw new Error('USDT contract not available');
+    }
+  };
 
   return { 
     web3,
@@ -190,7 +237,10 @@ const useContracts = () => {
     unstakeP2PTokens, 
     unstakeDexTokens, 
     getP2PStakings, 
-    getDexStakings 
+    getDexStakings,
+    buyTokensFromDex,
+    sellTokensToDex,
+    getUSDTBalance
   };
 };
 

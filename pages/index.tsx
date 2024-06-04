@@ -20,8 +20,11 @@ const Home: NextPage = () => {
   const [walletBalance, setWalletBalance] = useState<string>('0.00'); // Estado para el balance de la wallet
 
   const { address } = useAccount();
-  const { getAvailableBalance, buyTokensFromP2P, web3, contract } = useContract();
+  const { getAvailableBalance, buyTokensFromP2P, web3, contract, getUSDTBalance } = useContract();
   const [balance, setBalance] = useState<string | null>(null);
+  const [fetched, setFetched] = useState(false);
+  const [usdtBalance, setUsdtBalance] = useState('0');
+
 
   //This JSON will be innecesary after the API called is succesfully made
   const JSONtest = {
@@ -156,6 +159,23 @@ const Home: NextPage = () => {
     console.log(convertionToAcceptedValue(parseFloat(toValue)));
   }
 
+  const fetchBalances = async () => {
+    if (address && contract && !fetched) {
+      try {
+        const usdtBal = await getUSDTBalance(address);
+        const usdtBalInEther = usdtBal / (10 ** 9); // Asumiendo que USDT tiene 18 decimales
+        setUsdtBalance(usdtBalInEther);
+        setFetched(true)
+      } catch (error) {
+        console.error('Error fetching balances:', error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchBalances();
+  }, [contract, address, fetched]);
+
   return (
     <div>
       <Head>
@@ -220,7 +240,7 @@ const Home: NextPage = () => {
                   </select>
                 </div>
               </div>
-              <div className={styles.subContainerFooter}>Balance: {walletBalance}</div>
+              <div className={styles.subContainerFooter}>Balance: {usdtBalance}</div>
             </div>
             <div className={styles.subContainer}>
               <div className={styles.subContainerHeader}>
