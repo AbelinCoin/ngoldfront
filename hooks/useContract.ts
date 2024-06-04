@@ -1,17 +1,21 @@
-// hooks/utils/useContract.ts
-
 import { useState, useEffect } from 'react';
 import Web3 from 'web3';
 import { Contract } from 'web3-eth-contract';
 import contractABI from './utils/pitufo.json';
+import contractABIStaking from './utils/staking.json';
+import contractABIOffer from './utils/offer.json';
 import { useAccount } from 'wagmi';
 
-const useContract = () => {
+const useContracts = () => {
   const [web3, setWeb3] = useState<Web3 | null>(null);
   const [contract, setContract] = useState<Contract | null>(null);
+  const [offersContract, setOffersContract] = useState<Contract | null>(null);
+  const [stakingContract, setStakingContract] = useState<Contract | null>(null);
   const { address } = useAccount();
 
   const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+  const contractAddressStaking = process.env.NEXT_PUBLIC_STAKING_CONTRACT_ADDRESS;
+  const contractAddressOffer = process.env.NEXT_PUBLIC_OFFERS_CONTRACT_ADDRESS;
 
   useEffect(() => {
     if (window.ethereum && address) {
@@ -19,10 +23,16 @@ const useContract = () => {
       setWeb3(web3Instance);
       const contractInstance = new web3Instance.eth.Contract(contractABI, contractAddress);
       setContract(contractInstance);
+
+      const contractInstanceStaking = new web3Instance.eth.Contract(contractABIStaking, contractAddressStaking);
+      setStakingContract(contractInstanceStaking);
+
+      const contractInstanceOffer = new web3Instance.eth.Contract(contractABIOffer, contractAddressOffer);
+      setOffersContract(contractInstanceOffer);
     } else {
       console.error('Ethereum provider not found');
     }
-  }, [contractAddress, address]);
+  }, [contractAddress, contractAddressStaking, contractAddressOffer, address]);
 
   const getAvailableBalance = async () => {
     if (contract && address) {
@@ -39,7 +49,7 @@ const useContract = () => {
   };
 
   const buyTokensFromP2P = async (tokenAmount, usdtContractAddress, priceTokenPitufo) => {
-    if (contract && address) {
+    if (offersContract && address) {
       try {
         const result = await contract.methods.buyTokensFromP2P(tokenAmount, usdtContractAddress, priceTokenPitufo).send({ from: address });
         return result;
@@ -52,7 +62,136 @@ const useContract = () => {
     }
   };
 
-  return { web3, contract, getAvailableBalance, buyTokensFromP2P };
+  const stakeP2PTokens = async (amount) => {
+    if (stakingContract && address) {
+      try {
+        const result = await stakingContract.methods.stakeP2PTokens(amount).send({ from: address });
+        return result;
+      } catch (error) {
+        console.error('Error staking P2P tokens', error);
+        throw error;
+      }
+    } else {
+      throw new Error('Staking contract or account not available');
+    }
+  };
+
+  const stakeDexTokens = async (amount) => {
+    if (stakingContract && address) {
+      try {
+        const result = await stakingContract.methods.stakeDexTokens(amount).send({ from: address });
+        return result;
+      } catch (error) {
+        console.error('Error staking DEX tokens', error);
+        throw error;
+      }
+    } else {
+      throw new Error('Staking contract or account not available');
+    }
+  };
+
+  const unstakeP2PTokens = async (stakingIndex) => {
+    if (stakingContract && address) {
+      try {
+        const result = await stakingContract.methods.unstakeP2PTokens(stakingIndex).send({ from: address });
+        return result;
+      } catch (error) {
+        console.error('Error unstaking P2P tokens', error);
+        throw error;
+      }
+    } else {
+      throw new Error('Staking contract or account not available');
+    }
+  };
+
+  const unstakeDexTokens = async (stakingIndex) => {
+    if (stakingContract && address) {
+      try {
+        const result = await stakingContract.methods.unstakeDexTokens(stakingIndex).send({ from: address });
+        return result;
+      } catch (error) {
+        console.error('Error unstaking DEX tokens', error);
+        throw error;
+      }
+    } else {
+      throw new Error('Staking contract or account not available');
+    }
+  };
+
+  const getP2PStakings = async (account) => {
+    if (stakingContract) {
+      try {
+        const stakings = await stakingContract.methods.getP2PStakings(account).call({ from: account });
+        return stakings;
+      } catch (error) {
+        console.error('Error getting P2P stakings', error);
+        throw error;
+      }
+    } else {
+      throw new Error('Staking contract not available');
+    }
+  };
+
+  const getDexStakings = async (account) => {
+    if (stakingContract) {
+      try {
+        const stakings = await stakingContract.methods.getDexStakings(account).call({ from: account });
+        return stakings;
+      } catch (error) {
+        console.error('Error getting DEX stakings', error);
+        throw error;
+      }
+    } else {
+      throw new Error('Staking contract not available');
+    }
+  };
+
+  const getP2PBalance = async (account) => {
+    if (stakingContract) {
+      try {
+        const balance = await contract.methods.getP2PBalance(account).call();
+        return balance.toString();
+      } catch (error) {
+        console.error('Error getting P2P balance', error);
+        throw error;
+      }
+    } else {
+      throw new Error('Staking contract not available');
+    }
+  };
+
+  const getDexBalance = async (account) => {
+    if (stakingContract) {
+      try {
+        const balance = await contract.methods.getDexBalance(account).call();
+        return balance.toString();
+      } catch (error) {
+        console.error('Error getting Dex balance', error);
+        throw error;
+      }
+    } else {
+      throw new Error('Staking contract not available');
+    }
+  };
+
+ 
+
+  return { 
+    web3,
+    contract, 
+    offersContract, 
+    getP2PBalance, 
+    getDexBalance, 
+    stakingContract, 
+    getAvailableBalance, 
+    buyTokensFromP2P, 
+    stakeP2PTokens, 
+    stakeDexTokens, 
+    unstakeP2PTokens, 
+    unstakeDexTokens, 
+    getP2PStakings, 
+    getDexStakings 
+  };
 };
 
-export default useContract;
+export default useContracts;
