@@ -96,7 +96,7 @@ const Staking: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                <div className={styles.contentForm}>
+                {/* <div className={styles.contentForm}>
                   <span className={styles.formLabel}>Time to staking</span>
                   <div className={styles.containerInput}>
                     <select
@@ -137,16 +137,16 @@ const Staking: React.FC = () => {
                       Locked
                     </button>
                   </div>
-                </div>
+                </div> */}
                 <div className={styles.contentFormFooter}>
                   <div className={styles.footerDetails}>
                     <span className={styles.detailsLabel}>NGOLD</span>
                     <span className={styles.detailsValue}>{amount !== '' ? `$ ${amount}` : '$ 0.00'}</span>
                   </div>
-                  <div className={styles.footerDetails}>
+                  {/* <div className={styles.footerDetails}>
                     <span className={styles.detailsLabel}>Time to stake</span>
                     <span className={styles.detailsValue}>{stakeTime !== '' ? stakeTime : '0'}</span>
-                  </div>
+                  </div> */}
                   <div className={styles.footerDetails}>
                     <span className={styles.detailsLabel}>Your rewards</span>
                     <span className={styles.detailsValue}>{stakeType === 'Flexible' ? '2.5%' : '8%'}</span>
