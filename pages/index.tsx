@@ -1,3 +1,5 @@
+// pages/index.tsx
+
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import type { NextPage } from 'next';
@@ -17,7 +19,7 @@ const Home: NextPage = () => {
   const [goldValue, setGoldValue] = useState<number>(1);
   const [tokenPrice, setTokenPrice] = useState<number | string>(1);
   const [exchangeRate, setExchangeRate] = useState<number|null>(null);
-  const [walletBalance, setWalletBalance] = useState<string>('0.00'); // Estado para el balance de la wallet
+  const [walletBalance, setWalletBalance] = useState<string>('0.00');
 
   const { address } = useAccount();
   const { getAvailableBalance, buyTokensFromP2P, web3, contract, getUSDTBalance } = useContract();
@@ -118,7 +120,7 @@ const Home: NextPage = () => {
     }
   };
 
-  const usdtContractAddress = '0x1ca23a42D0c095748ebc43C3fdC219170181CD55';
+  const usdtContractAddress = '0xA3E5DfE71aE3e6DeC4D98fa28821dF355d7244B3';
   const priceTokenPitufo = tokenPrice;
 
   const handleApproveAndBuyTokens = async () => {
@@ -133,7 +135,7 @@ const Home: NextPage = () => {
         // Finalmente, compramos los tokens
         const result = await buyTokensFromP2P(convertionToAcceptedValue(parseFloat(toValue)), usdtContractAddress, convertionToAcceptedValue(parseFloat(fromValue)));
         const status = result.status;
-        const statusNumber = Number(status); // Convertimos BigInt a número
+        const statusNumber = Number(status);
         let url = `https://amoy.polygonscan.com/tx/${result.transactionHash}`;
 
         if (statusNumber === 1) {

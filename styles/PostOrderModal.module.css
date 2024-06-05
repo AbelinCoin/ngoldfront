@@ -227,6 +227,11 @@
   cursor: not-allowed;
 }
 
+.active {
+  background-color: #4FBC7B;
+  color: #FFF;
+}
+
 .buyActiveButton {
   background-color: #4FBC7B;
   color: #FFF;

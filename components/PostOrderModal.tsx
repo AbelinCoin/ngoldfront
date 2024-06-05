@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styles from '../styles/PostOrderModal.module.css';
+import useContracts from '../hooks/useContract';
+import { useAccount } from 'wagmi';
 
 interface PostOrderModalProps {
   show: boolean;
@@ -7,41 +9,100 @@ interface PostOrderModalProps {
 }
 
 const PostOrderModal: React.FC<PostOrderModalProps> = ({ show, onClose }) => {
+  const { web3, getUSDTBalance, getP2PBalance, getDexBalance, createOffer } = useContracts();
+  const { address } = useAccount();
+
+  const [isBuying, setIsBuying] = useState(true);
   const [amount, setAmount] = useState('');
-  const [price, setPrice] = useState('');
-  const [minLimit, setMinLimit] = useState('');
-  const [maxLimit, setMaxLimit] = useState('');
-  const [isBuySelected, setIsBuySelected] = useState(true);
+  const [unitPrice, setUnitPrice] = useState('');
+  const [minBuyAmount, setMinBuyAmount] = useState('');
+  const [maxBuyAmount, setMaxBuyAmount] = useState('');
+  const [totalPrice, setTotalPrice] = useState('');
+  const [tokenType, setTokenType] = useState('NGOLD');
+  const [balanceType, setBalanceType] = useState('P2P');
+  const [balance, setBalance] = useState('0.00');
+  const [fetched, setFetched] = useState(false);
+
+  const fetchBalances = async () => {
+    if (address) {
+      try {
+        if (tokenType === 'USDT') {
+          const usdtBal = await getUSDTBalance(address);
+          const usdtBalInEther = usdtBal / (10 ** 9); // Asumiendo que USDT tiene 18 decimales
+          setBalance(usdtBalInEther.toString());
+        } else {
+          if (balanceType === 'P2P') {
+            const p2pBal = await getP2PBalance(address);
+            const p2pBalInEther = p2pBal / (10 ** 9);
+            setBalance(p2pBalInEther.toString());
+          } else {
+            const dexBal = await getDexBalance(address);
+            const dexBalInEther = dexBal / (10 ** 9);
+            setBalance(dexBalInEther.toString());
+          }
+        }
+        setFetched(true);
+      } catch (error) {
+        console.error('Error fetching balances:', error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchBalances();
+  }, [address, tokenType, balanceType]);
 
   if (!show) {
     return null;
   }
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setAmount(e.target.value);
+    const value = e.target.value;
+    if (parseFloat(value) <= parseFloat(balance)) {
+      setAmount(value);
+      setMaxBuyAmount(value); // El máximo por defecto será el amount total
+      updateTotalPrice(value, unitPrice);
+    }
   };
 
-  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPrice(e.target.value);
+  const handleUnitPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUnitPrice(e.target.value);
+    updateTotalPrice(amount, e.target.value);
   };
 
-  const handleMinLimitChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setMinLimit(e.target.value);
+  const handleMinBuyAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (parseFloat(value) <= parseFloat(amount)) {
+      setMinBuyAmount(value);
+    } else {
+      setMinBuyAmount(amount);
+    }
   };
 
-  const handleMaxLimitChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setMaxLimit(e.target.value);
+  const updateTotalPrice = (amount: string, unitPrice: string) => {
+    const total = parseFloat(amount) * parseFloat(unitPrice);
+    setTotalPrice(isNaN(total) ? '' : total.toString());
   };
 
-  const handleBuyClick = () => {
-    setIsBuySelected(true);
+  const handlePostOrder = async () => {
+    if (address && web3) {
+      try {
+        const totalPriceWei = web3.utils.toWei(totalPrice, 'ether');
+        await createOffer(
+          web3.utils.toWei(amount, 'ether'),
+          web3.utils.toWei(unitPrice, 'ether'),
+          totalPriceWei,
+          web3.utils.toWei(minBuyAmount, 'ether'),
+          tokenType,
+          isBuying,
+          '0xA3E5DfE71aE3e6DeC4D98fa28821dF355d7244B3'
+        );
+        onClose();
+      } catch (error) {
+        console.error('Error posting order', error);
+      }
+    }
   };
-
-  const handleSellClick = () => {
-    setIsBuySelected(false);
-  };
-
-  const isFormValid = amount !== '' && price !== '' && minLimit !== '' && maxLimit !== '';
 
   return (
     <div className={styles.modalOverlay}>
@@ -55,15 +116,15 @@ const PostOrderModal: React.FC<PostOrderModalProps> = ({ show, onClose }) => {
             <span className={styles.formLabel}>I want to</span>
             <div className={styles.containerButtons}>
               <button
-                className={`${styles.buyButton} ${isBuySelected ? '' : styles.inactiveButton}`}
-                onClick={handleBuyClick}
+                className={`${styles.buyButton} ${isBuying ? styles.active : styles.inactiveButton}`}
+                onClick={() => setIsBuying(true)}
               >
                 Buy
               </button>
               <span className={styles.separator}>|</span>
               <button
-                className={`${styles.soldButton} ${isBuySelected ? styles.inactiveButton : ''}`}
-                onClick={handleSellClick}
+                className={`${styles.soldButton} ${!isBuying ? styles.active : styles.inactiveButton}`}
+                onClick={() => setIsBuying(false)}
               >
                 Sell
               </button>
@@ -83,17 +144,29 @@ const PostOrderModal: React.FC<PostOrderModalProps> = ({ show, onClose }) => {
                     onChange={handleAmountChange}
                   />
                 </div>
-                <select className={styles.selectField}>
-                  <option value="NGOLD">NGOLD</option>
-                  <option value="USDT">USDT</option>
-                </select>
+                <div>
+                  <select className={styles.selectField} value={tokenType} onChange={(e) => setTokenType(e.target.value)}>
+                    <option value="NGOLD">NGOLD</option>
+                    <option value="USDT">USDT</option>
+                  </select>
+                </div>
               </div>
+              {tokenType === 'NGOLD' && (
+                <div className={styles.containerInputAmount}>
+                  <div>
+                    <select className={styles.selectField} value={balanceType} onChange={(e) => setBalanceType(e.target.value)}>
+                      <option value="P2P">P2P Balance</option>
+                      <option value="Dex">Dex Balance</option>
+                    </select>
+                  </div>
+                </div>
+              )}
               <div className={styles.containerInputFooter}>
                 <div className={styles.containerInputFooterBalance}>
                   <span>Balance</span>
-                  <span>0.00</span>
+                  <span>{balance}</span>
                 </div>
-                <button className={styles.useMaxButton}>Use Max</button>
+                <button className={styles.useMaxButton} onClick={() => setAmount(balance)}>Use Max</button>
               </div>
             </div>
           </div>
@@ -107,8 +180,8 @@ const PostOrderModal: React.FC<PostOrderModalProps> = ({ show, onClose }) => {
                     type="number"
                     placeholder="0.00"
                     className={styles.inputField}
-                    value={price}
-                    onChange={handlePriceChange}
+                    value={unitPrice}
+                    onChange={handleUnitPriceChange}
                   />
                 </div>
               </div>
@@ -124,8 +197,8 @@ const PostOrderModal: React.FC<PostOrderModalProps> = ({ show, onClose }) => {
                   type="number"
                   placeholder="0"
                   className={styles.inputField}
-                  value={minLimit}
-                  onChange={handleMinLimitChange}
+                  value={minBuyAmount}
+                  onChange={handleMinBuyAmountChange}
                 />
               </div>
               <div className={styles.inputLimit}>
@@ -133,31 +206,32 @@ const PostOrderModal: React.FC<PostOrderModalProps> = ({ show, onClose }) => {
                   type="number"
                   placeholder="0"
                   className={styles.inputField}
-                  value={maxLimit}
-                  onChange={handleMaxLimitChange}
+                  value={maxBuyAmount}
+                  onChange={(e) => setMaxBuyAmount(e.target.value)}
                 />
               </div>
             </div>
           </div>
           <div className={styles.footerContent}>
             <div className={styles.descriptionContent}>
-              <span className={styles.descriptionContentlabel}>Your price:</span>
-              <span className={styles.dynamicText}>{price !== '' ? `$${price}` : '$0.00'}</span>
+              <span className={styles.descriptionContentlabel}>unitPrice</span>
+              <span className={styles.dynamicText}>{unitPrice || '$0.00'}</span>
             </div>
             <div className={styles.descriptionContent}>
-              <span className={styles.descriptionContentlabel}>Asset Amount</span>
-              <span className={styles.dynamicText}>{amount !== '' ? `$${amount}` : '$0.00'}</span>
+              <span className={styles.descriptionContentlabel}>Amount</span>
+              <span className={styles.dynamicText}>{amount || '$0.00'}</span>
             </div>
             <div className={styles.descriptionContent}>
-              <span className={styles.descriptionContentlabel}>Your limit:</span>
-              <span className={styles.dynamicText}>{minLimit !== '' || maxLimit !== '' ? `${minLimit} - ${maxLimit}` : '0 - 0'}</span>
+              <span className={styles.descriptionContentlabel}>minBuyAmount and amount</span>
+              <span className={styles.dynamicText}>{minBuyAmount && maxBuyAmount ? `${minBuyAmount} - ${maxBuyAmount}` : '0 - 0'}</span>
             </div>
           </div>
         </div>
         <div className={styles.footerContainer}>
           <button
-            className={`${styles.postOrderButton} ${isFormValid ? (isBuySelected ? styles.buyActiveButton : styles.sellActiveButton) : ''}`}
-            disabled={!isFormValid}
+            className={`${styles.postOrderButton} ${(amount && unitPrice && minBuyAmount && maxBuyAmount) ? styles.active : ''}`}
+            disabled={!(amount && unitPrice && minBuyAmount && maxBuyAmount)}
+            onClick={handlePostOrder}
           >
             Post Order
           </button>

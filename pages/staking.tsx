@@ -1,3 +1,5 @@
+// pages/staking.tsx
+
 import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import styles from '../styles/Staking.module.css';
