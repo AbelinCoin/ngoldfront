@@ -20,9 +20,10 @@ const Home: NextPage = () => {
   const [walletBalance, setWalletBalance] = useState<string>('0.00'); // Estado para el balance de la wallet
 
   const { address } = useAccount();
-  const { getAvailableBalance, buyTokensFromP2P, web3, contract, getUSDTBalance } = useContract();
+  const { getAvailableBalance, buyTokensFromP2P, web3, contract, getUSDTBalance, repayDebt} = useContract();
   const [balance, setBalance] = useState<string | null>(null);
   const [fetched, setFetched] = useState(false);
+  const [fetchedAux, setFetchedAux] = useState(false);
   const [usdtBalance, setUsdtBalance] = useState('0');
 
 
@@ -109,15 +110,6 @@ const Home: NextPage = () => {
     }
   };
 
-  const handleButtonClick = async () => {
-    try {
-      const availableBalance = await getAvailableBalance();
-      setBalance(availableBalance);
-    } catch (error) {
-      console.error('Error fetching available balance', error);
-    }
-  };
-
   const usdtContractAddress = '0x1ca23a42D0c095748ebc43C3fdC219170181CD55';
   const priceTokenPitufo = tokenPrice;
 
@@ -126,7 +118,6 @@ const Home: NextPage = () => {
       try {
         // Primero, obtenemos el contrato USDT
         const usdtContract = new web3.eth.Contract(usdtContractABI, usdtContractAddress);
-
         // Luego, aprobamos la cantidad de tokens que el contrato puede mover
         await usdtContract.methods.approve(contract.options.address, convertionToAcceptedValue(parseFloat(fromValue))).send({ from: address });
 
@@ -153,28 +144,23 @@ const Home: NextPage = () => {
     }
   };
 
-  const handleTest = () =>{
-    console.log(convertionToAcceptedValue(parseFloat(fromValue)));
-    console.log(tokenPrice);
-    console.log(convertionToAcceptedValue(parseFloat(toValue)));
-  }
-
   const fetchBalances = async () => {
-    if (address && contract && !fetched) {
+    if (address && contract) {
       try {
         const usdtBal = await getUSDTBalance(address);
         const usdtBalInEther = usdtBal / (10 ** 9); // Asumiendo que USDT tiene 18 decimales
         setUsdtBalance(usdtBalInEther);
-        setFetched(true)
       } catch (error) {
         console.error('Error fetching balances:', error);
       }
+    }else{
+      setUsdtBalance('0');
     }
   };
 
   useEffect(() => {
     fetchBalances();
-  }, [contract, address, fetched]);
+  }, [contract, address]);
 
   return (
     <div>

@@ -35,6 +35,11 @@ const Navbar: React.FC<NavbarProps> = ({goldValue}) => {
                   <a className={`nav-link ${styles.navLink}`}>Staking</a>
                 </Link>
               </li>
+              <li className="nav-item">
+                <Link href="/reward" passHref legacyBehavior>
+                  <a className={`nav-link ${styles.navLink}`}>Rewards</a>
+                </Link>
+              </li>
             </ul>
           </div>
           <div className={styles.navSection}>

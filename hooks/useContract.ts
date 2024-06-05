@@ -223,6 +223,35 @@ const useContracts = () => {
     }
   };
 
+  const getPurchases = async (address) => {
+    if (contract && address) {
+      try {
+        const result = await contract.methods.getPurchases(address).call();
+        return result;
+      } catch (error) {
+        console.error('Error get Purchases', error);
+        throw error;
+      }
+    } else {
+      throw new Error('Contract or account not available');
+    }
+  };
+
+  const claimReward = async (purchaseIndex) => {
+    if (contract && address) {
+      try {
+        const result = await contract.methods.claimReward(purchaseIndex).send({ from: address });
+        return result;
+      } catch (error) {
+        console.error('Error claiming reward:', error);
+        throw error;
+      }
+    } else {
+      throw new Error('Contract or account not available');
+    }
+  };
+
+
   return { 
     web3,
     contract, 
@@ -240,7 +269,9 @@ const useContracts = () => {
     getDexStakings,
     buyTokensFromDex,
     sellTokensToDex,
-    getUSDTBalance
+    getUSDTBalance,
+    getPurchases,
+    claimReward
   };
 };
 
