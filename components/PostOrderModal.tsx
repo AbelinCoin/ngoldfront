@@ -9,7 +9,7 @@ interface PostOrderModalProps {
 }
 
 const PostOrderModal: React.FC<PostOrderModalProps> = ({ show, onClose }) => {
-  const { web3, getUSDTBalance, getP2PBalance, getDexBalance, createOffer } = useContracts();
+  const { offersContract, web3, getUSDTBalance, getP2PBalance, getDexBalance } = useContracts();
   const { address } = useAccount();
 
   const [isBuying, setIsBuying] = useState(true);
@@ -28,7 +28,7 @@ const PostOrderModal: React.FC<PostOrderModalProps> = ({ show, onClose }) => {
       try {
         if (tokenType === 'USDT') {
           const usdtBal = await getUSDTBalance(address);
-          const usdtBalInEther = usdtBal / (10 ** 9); // Asumiendo que USDT tiene 18 decimales
+          const usdtBalInEther = usdtBal / (10 ** 18); // Asumiendo que USDT tiene 18 decimales
           setBalance(usdtBalInEther.toString());
         } else {
           if (balanceType === 'P2P') {
@@ -85,18 +85,20 @@ const PostOrderModal: React.FC<PostOrderModalProps> = ({ show, onClose }) => {
   };
 
   const handlePostOrder = async () => {
-    if (address && web3) {
+    if (offersContract && address && web3) {
       try {
         const totalPriceWei = web3.utils.toWei(totalPrice, 'ether');
-        await createOffer(
-          web3.utils.toWei(amount, 'ether'),
-          web3.utils.toWei(unitPrice, 'ether'),
-          totalPriceWei,
-          web3.utils.toWei(minBuyAmount, 'ether'),
-          tokenType,
-          isBuying,
-          '0xA3E5DfE71aE3e6DeC4D98fa28821dF355d7244B3'
-        );
+        await offersContract.methods
+          .createOffer(
+            web3.utils.toWei(amount, 'ether'),
+            web3.utils.toWei(unitPrice, 'ether'),
+            totalPriceWei,
+            web3.utils.toWei(minBuyAmount, 'ether'),
+            tokenType,
+            isBuying,
+            '0x40C73b08284367162719c713bAd1e9A5c81c00D7'
+          )
+          .send({ from: address });
         onClose();
       } catch (error) {
         console.error('Error posting order', error);

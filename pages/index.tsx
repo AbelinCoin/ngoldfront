@@ -112,7 +112,16 @@ const Home: NextPage = () => {
     }
   };
 
-  const usdtContractAddress = '0x1ca23a42D0c095748ebc43C3fdC219170181CD55';
+  const handleButtonClick = async () => {
+    try {
+      const availableBalance = await getAvailableBalance();
+      setBalance(availableBalance);
+    } catch (error) {
+      console.error('Error fetching available balance', error);
+    }
+  };
+
+  const usdtContractAddress = '0x40C73b08284367162719c713bAd1e9A5c81c00D7';
   const priceTokenPitufo = tokenPrice;
 
   const handleApproveAndBuyTokens = async () => {

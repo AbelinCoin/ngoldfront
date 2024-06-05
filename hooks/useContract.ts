@@ -20,7 +20,7 @@ const useContracts = () => {
   const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
   const contractAddressStaking = process.env.NEXT_PUBLIC_STAKING_CONTRACT_ADDRESS;
   const contractAddressOffer = process.env.NEXT_PUBLIC_OFFERS_CONTRACT_ADDRESS;
-  const usdtContractAddress = '0xA3E5DfE71aE3e6DeC4D98fa28821dF355d7244B3';
+  const usdtContractAddress = '0x40C73b08284367162719c713bAd1e9A5c81c00D7';
 
   useEffect(() => {
     if (window.ethereum && address) {
