@@ -1,3 +1,5 @@
+// hooks/useContract.ts
+
 import { useState, useEffect } from 'react';
 import Web3 from 'web3';
 import { Contract } from 'web3-eth-contract';
@@ -18,7 +20,7 @@ const useContracts = () => {
   const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
   const contractAddressStaking = process.env.NEXT_PUBLIC_STAKING_CONTRACT_ADDRESS;
   const contractAddressOffer = process.env.NEXT_PUBLIC_OFFERS_CONTRACT_ADDRESS;
-  const usdtContractAddress = '0x66f45494f187Cf21cA5b6d0586e934EC38ff0bBB';
+  const usdtContractAddress = '0xA3E5DfE71aE3e6DeC4D98fa28821dF355d7244B3';
 
   useEffect(() => {
     if (window.ethereum && address) {
@@ -230,6 +232,20 @@ const useContracts = () => {
         return result;
       } catch (error) {
         console.error('Error get Purchases', error);
+      }
+
+    }
+  }
+  
+  const createOffer = async (amount, unitPrice, totalPrice, minBuyAmount, tokenType, isBuying) => {
+    if (offersContract && address) {
+      try {
+        const result = await offersContract.methods
+          .createOffer(amount, unitPrice, totalPrice, minBuyAmount, tokenType, isBuying, usdtContractAddress)
+          .send({ from: address });
+        return result;
+      } catch (error) {
+        console.error('Error creating offer', error);
         throw error;
       }
     } else {
@@ -271,7 +287,8 @@ const useContracts = () => {
     sellTokensToDex,
     getUSDTBalance,
     getPurchases,
-    claimReward
+    claimReward,
+    createOffer
   };
 };
 
