@@ -1,5 +1,3 @@
-// components/Orders.tsx
-
 import React, { useState, useEffect } from 'react';
 import styles from '../styles/P2P.module.css';
 import PostOrderModal from './PostOrderModal';
@@ -8,6 +6,17 @@ import { useAccount } from 'wagmi';
 
 const convertionToAcceptedValue = (value: number) => {
   return Math.round(value * 10 ** 9);
+};
+
+const formatNumber = (value: string) => {
+  const number = parseFloat(value);
+  return `${number.toFixed(2)} USDT`;
+};
+
+const formatDateExpired = (timestamp: string) => {
+  const secondsLeft = parseInt(timestamp) - Math.floor(Date.now() / 1000);
+  const daysLeft = Math.ceil(secondsLeft / (60 * 60 * 24));
+  return `${daysLeft} Days`;
 };
 
 const Orders: React.FC = () => {
@@ -31,15 +40,14 @@ const Orders: React.FC = () => {
           const result = await getUserOffers(address);
           if (result && result[1]) {
             const offers = result[1];
-            // Convertimos los valores BigInt a String
             const formattedOffers = offers.map((offer: any) => ({
               ...offer,
-              amount: offer.amount.toString(),
-              unitPrice: offer.unitPrice.toString(),
-              totalPrice: offer.totalPrice.toString(),
-              minBuyAmount: offer.minBuyAmount.toString(),
+              amount: formatNumber(offer.amount.toString()),
+              unitPrice: formatNumber(offer.unitPrice.toString()),
+              totalPrice: formatNumber(offer.totalPrice.toString()),
+              minBuyAmount: formatNumber(offer.minBuyAmount.toString()),
               dateCreated: offer.dateCreated.toString(),
-              dateExpired: offer.dateExpired.toString(),
+              dateExpired: formatDateExpired(offer.dateExpired.toString()),
               isBuying: offer.isBuying.toString(),
             }));
             setUserOffers(formattedOffers);
@@ -71,35 +79,30 @@ const Orders: React.FC = () => {
         </>
       ) : (
         <div className={styles.ordersList}>
-          <h2 className={styles.ordersTitle}>Your Orders</h2>
+          <div className={styles.tableHeader}>
+            <h2 className={styles.ordersTitle}>Your Orders</h2>
+            <button className={styles.postOrderButton} onClick={handleOpenModal}>Post Order</button>
+          </div>
           <table className={styles.ordersTable}>
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Amount</th>
-                <th>Unit Price</th>
-                <th>Total Price</th>
-                <th>Min Buy Amount</th>
+                <th>Order Type</th>
                 <th>Status</th>
-                <th>Date Created</th>
-                <th>Date Expired</th>
-                <th>Token Type</th>
-                <th>Is Buying</th>
+                <th>Amount</th>
+                <th>Price</th>
+                <th>Limit</th>
+                <th>Time left</th>
               </tr>
             </thead>
             <tbody>
               {userOffers.map((offer, index) => (
                 <tr key={index}>
-                  <td>{index + 1}</td>
+                  <td>{offer.isBuying === 'true' ? 'Buy NGOLD with USDT' : 'Sell NGOLD for USDT'}</td>
+                  <td>{offer.status}</td>
                   <td>{offer.amount}</td>
                   <td>{offer.unitPrice}</td>
-                  <td>{offer.totalPrice}</td>
-                  <td>{offer.minBuyAmount}</td>
-                  <td>{offer.status}</td>
-                  <td>{new Date(parseInt(offer.dateCreated) * 1000).toLocaleString()}</td>
-                  <td>{new Date(parseInt(offer.dateExpired) * 1000).toLocaleString()}</td>
-                  <td>{offer.tokenType}</td>
-                  <td>{offer.isBuying === 'true' ? 'Buying' : 'Selling'}</td>
+                  <td>{offer.minBuyAmount} - {offer.totalPrice}</td>
+                  <td>{offer.dateExpired}</td>
                 </tr>
               ))}
             </tbody>

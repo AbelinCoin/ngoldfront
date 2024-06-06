@@ -276,8 +276,7 @@ const useContracts = () => {
         throw error;
       }
     } else {
-      console.warn('Offers contract not available');
-      return [[], []]; // Devolver un array vacío si el contrato no está disponible
+      throw new Error('Offers contract not available');
     }
   };
 
