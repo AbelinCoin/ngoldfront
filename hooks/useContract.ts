@@ -1,5 +1,3 @@
-// hooks/useContract.ts
-
 import { useState, useEffect } from 'react';
 import Web3 from 'web3';
 import { Contract } from 'web3-eth-contract';
@@ -182,7 +180,60 @@ const useContracts = () => {
     }
   };
 
-  // Adding the new functions
+  const convertionToAcceptedValue = (value: BigInt) => {
+    return Number(value) * 10 ** 9;
+  };
+
+  const getUserOffers = async (account) => {
+    if (offersContract && account) {
+      try {
+        const result = await offersContract.methods.getUserOffers(account).call();
+        const offerIds = result[0];
+        const offers = result[1].map(offer => ({
+          ...offer,
+          amount: convertionToAcceptedValue(BigInt(offer.amount)),
+          unitPrice: convertionToAcceptedValue(BigInt(offer.unitPrice)),
+          totalPrice: convertionToAcceptedValue(BigInt(offer.totalPrice)),
+          minBuyAmount: convertionToAcceptedValue(BigInt(offer.minBuyAmount))
+        }));
+        return {
+          offerIds,
+          offers
+        };
+      } catch (error) {
+        console.error('Error getting user offers', error);
+        throw error;
+      }
+    } else {
+      throw new Error('Offers contract or account not available');
+    }
+  };
+
+  const getPendingOffers = async () => {
+    if (offersContract) {
+      try {
+        const result = await offersContract.methods.getPendingOffers().call();
+        const offerIds = result[0];
+        const offers = result[1].map(offer => ({
+          ...offer,
+          amount: convertionToAcceptedValue(BigInt(offer.amount)),
+          unitPrice: convertionToAcceptedValue(BigInt(offer.unitPrice)),
+          totalPrice: convertionToAcceptedValue(BigInt(offer.totalPrice)),
+          minBuyAmount: convertionToAcceptedValue(BigInt(offer.minBuyAmount))
+        }));
+        return {
+          offerIds,
+          offers
+        };
+      } catch (error) {
+        console.error('Error getting pending offers', error);
+        throw error;
+      }
+    } else {
+      throw new Error('Offers contract not available');
+    }
+  };
+
   const buyTokensFromDex = async (tokenAmount, usdtContractAddress, priceTokenPitufo) => {
     if (contract && address) {
       try {
@@ -267,7 +318,6 @@ const useContracts = () => {
     }
   };
 
-
   return { 
     web3,
     contract, 
@@ -288,7 +338,9 @@ const useContracts = () => {
     getUSDTBalance,
     getPurchases,
     claimReward,
-    createOffer
+    createOffer,
+    getUserOffers,
+    getPendingOffers
   };
 };
 

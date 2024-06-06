@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styles from '../styles/PostOrderModal.module.css';
 import useContracts from '../hooks/useContract';
 import { useAccount } from 'wagmi';
+import usdtContractABI from '../hooks/utils/usdt.json';
 
 interface PostOrderModalProps {
   show: boolean;
@@ -9,7 +10,7 @@ interface PostOrderModalProps {
 }
 
 const PostOrderModal: React.FC<PostOrderModalProps> = ({ show, onClose }) => {
-  const { offersContract, web3, getUSDTBalance, getP2PBalance, getDexBalance } = useContracts();
+  const { offersContract, getUSDTBalance, getP2PBalance, getDexBalance, web3 } = useContracts();
   const { address } = useAccount();
 
   const [isBuying, setIsBuying] = useState(true);
@@ -18,28 +19,29 @@ const PostOrderModal: React.FC<PostOrderModalProps> = ({ show, onClose }) => {
   const [minBuyAmount, setMinBuyAmount] = useState('');
   const [maxBuyAmount, setMaxBuyAmount] = useState('');
   const [totalPrice, setTotalPrice] = useState('');
-  const [tokenType, setTokenType] = useState('NGOLD');
-  const [balanceType, setBalanceType] = useState('P2P');
+  const [balanceType, setBalanceType] = useState('General');
   const [balance, setBalance] = useState('0.00');
   const [fetched, setFetched] = useState(false);
+
+  const convertionToAcceptedValue = (value: number) => {
+    return Math.round(value * 10 ** 9);
+  };
 
   const fetchBalances = async () => {
     if (address) {
       try {
-        if (tokenType === 'USDT') {
+        if (balanceType === 'General') {
           const usdtBal = await getUSDTBalance(address);
           const usdtBalInEther = usdtBal / (10 ** 18); // Asumiendo que USDT tiene 18 decimales
           setBalance(usdtBalInEther.toString());
-        } else {
-          if (balanceType === 'P2P') {
-            const p2pBal = await getP2PBalance(address);
-            const p2pBalInEther = p2pBal / (10 ** 9);
-            setBalance(p2pBalInEther.toString());
-          } else {
-            const dexBal = await getDexBalance(address);
-            const dexBalInEther = dexBal / (10 ** 9);
-            setBalance(dexBalInEther.toString());
-          }
+        } else if (balanceType === 'P2P') {
+          const p2pBal = await getP2PBalance(address);
+          const p2pBalInEther = p2pBal / (10 ** 9);
+          setBalance(p2pBalInEther.toString());
+        } else if (balanceType === 'Dex') {
+          const dexBal = await getDexBalance(address);
+          const dexBalInEther = dexBal / (10 ** 9);
+          setBalance(dexBalInEther.toString());
         }
         setFetched(true);
       } catch (error) {
@@ -50,7 +52,7 @@ const PostOrderModal: React.FC<PostOrderModalProps> = ({ show, onClose }) => {
 
   useEffect(() => {
     fetchBalances();
-  }, [address, tokenType, balanceType]);
+  }, [address, balanceType]);
 
   if (!show) {
     return null;
@@ -84,21 +86,46 @@ const PostOrderModal: React.FC<PostOrderModalProps> = ({ show, onClose }) => {
     setTotalPrice(isNaN(total) ? '' : total.toString());
   };
 
+  const approveUSDT = async (totalPrice: string) => {
+    const usdtContractAddress = '0x40C73b08284367162719c713bAd1e9A5c81c00D7';
+    const usdtContract = new web3.eth.Contract(usdtContractABI, usdtContractAddress);
+
+    await usdtContract.methods.approve(offersContract.options.address, convertionToAcceptedValue(parseFloat(totalPrice))).send({ from: address });
+  };
+
   const handlePostOrder = async () => {
-    if (offersContract && address && web3) {
+    if (offersContract && address) {
       try {
-        const totalPriceWei = web3.utils.toWei(totalPrice, 'ether');
-        await offersContract.methods
+        const totalPriceWei = convertionToAcceptedValue(parseFloat(totalPrice));
+
+        if (balanceType === 'General' && isBuying) {
+          await approveUSDT(totalPrice);
+        }
+
+        const result = await offersContract.methods
           .createOffer(
-            web3.utils.toWei(amount, 'ether'),
-            web3.utils.toWei(unitPrice, 'ether'),
+            convertionToAcceptedValue(parseFloat(amount)),
+            convertionToAcceptedValue(parseFloat(unitPrice)),
             totalPriceWei,
-            web3.utils.toWei(minBuyAmount, 'ether'),
-            tokenType,
+            convertionToAcceptedValue(parseFloat(minBuyAmount)),
+            balanceType,
             isBuying,
             '0x40C73b08284367162719c713bAd1e9A5c81c00D7'
           )
           .send({ from: address });
+
+        const status = result.status;
+        const statusNumber = Number(status);
+        let url = `https://amoy.polygonscan.com/tx/${result.transactionHash}`;
+
+        if (statusNumber === 1) {
+          console.log('Transaction successful:', result.transactionHash);
+          window.open(url, '_blank');
+        } else {
+          console.log('Transaction failed:', result);
+          window.open(url, '_blank');
+        }
+
         onClose();
       } catch (error) {
         console.error('Error posting order', error);
@@ -125,7 +152,7 @@ const PostOrderModal: React.FC<PostOrderModalProps> = ({ show, onClose }) => {
               </button>
               <span className={styles.separator}>|</span>
               <button
-                className={`${styles.soldButton} ${!isBuying ? styles.active : styles.inactiveButton}`}
+                className={`${styles.soldButton} ${!isBuying ? styles.sellActiveButton : styles.inactiveButton}`}
                 onClick={() => setIsBuying(false)}
               >
                 Sell
@@ -147,13 +174,14 @@ const PostOrderModal: React.FC<PostOrderModalProps> = ({ show, onClose }) => {
                   />
                 </div>
                 <div>
-                  <select className={styles.selectField} value={tokenType} onChange={(e) => setTokenType(e.target.value)}>
-                    <option value="NGOLD">NGOLD</option>
-                    <option value="USDT">USDT</option>
+                  <select className={styles.selectField} value={balanceType} onChange={(e) => setBalanceType(e.target.value)}>
+                    <option value="General">General (USDT)</option>
+                    <option value="Dex">Dex</option>
+                    <option value="P2P">P2P</option>
                   </select>
                 </div>
               </div>
-              {tokenType === 'NGOLD' && (
+              {/* {(balanceType === 'Dex' || balanceType === 'P2P') && (
                 <div className={styles.containerInputAmount}>
                   <div>
                     <select className={styles.selectField} value={balanceType} onChange={(e) => setBalanceType(e.target.value)}>
@@ -162,7 +190,7 @@ const PostOrderModal: React.FC<PostOrderModalProps> = ({ show, onClose }) => {
                     </select>
                   </div>
                 </div>
-              )}
+              )} */}
               <div className={styles.containerInputFooter}>
                 <div className={styles.containerInputFooterBalance}>
                   <span>Balance</span>
