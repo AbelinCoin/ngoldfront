@@ -1,3 +1,5 @@
+// components/PostOrderModal.tsx
+
 import React, { useState, useEffect } from 'react';
 import styles from '../styles/PostOrderModal.module.css';
 import useContracts from '../hooks/useContract';
@@ -32,7 +34,7 @@ const PostOrderModal: React.FC<PostOrderModalProps> = ({ show, onClose }) => {
       try {
         if (balanceType === 'General') {
           const usdtBal = await getUSDTBalance(address);
-          const usdtBalInEther = usdtBal / (10 ** 18); // Asumiendo que USDT tiene 18 decimales
+          const usdtBalInEther = usdtBal / (10 ** 9); // Asumiendo que USDT tiene 18 decimales
           setBalance(usdtBalInEther.toString());
         } else if (balanceType === 'P2P') {
           const p2pBal = await getP2PBalance(address);
