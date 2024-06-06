@@ -117,7 +117,7 @@ const Home: NextPage = () => {
       const availableBalance = await getAvailableBalance();
       setBalance(availableBalance);
     } catch (error) {
-      console.error('Error fetching available balance', error);
+      console.log('Error fetching available balance', error);
     }
   };
 
@@ -148,7 +148,12 @@ const Home: NextPage = () => {
             window.open(url, '_blank');
         }
       } catch (error) {
-        console.error('Error approving tokens and buying tokens from P2P', error);
+        const transactionHash = error?.transactionHash || error?.receipt?.transactionHash || null;
+        if (transactionHash) {
+            let url = `https://amoy.polygonscan.com/tx/${transactionHash}`;
+            window.open(url, '_blank');
+        }
+        console.log(error);
       }
     } else {
       throw new Error('Web3, contract or account not available');
@@ -162,7 +167,7 @@ const Home: NextPage = () => {
         const usdtBalInEther = usdtBal / (10 ** 9); // Asumiendo que USDT tiene 18 decimales
         setUsdtBalance(usdtBalInEther);
       } catch (error) {
-        console.error('Error fetching balances:', error);
+        console.log('Error fetching balances:', error);
       }
     }else{
       setUsdtBalance('0');

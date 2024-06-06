@@ -126,7 +126,12 @@ const Staking: React.FC = () => {
         }
         setAmount('')
     } catch (error) {
-        console.error('Error in staking NGOLD:', error);
+      const transactionHash = error?.transactionHash || error?.receipt?.transactionHash || null;
+      if (transactionHash) {
+          let url = `https://amoy.polygonscan.com/tx/${transactionHash}`;
+          window.open(url, '_blank');
+      }
+      console.log(error);
     }
   };
 
@@ -156,7 +161,12 @@ const Staking: React.FC = () => {
           //let url = `https://amoy.polygonscan.com/tx/${retireStaking.transactionHash}`; // url para redireccionar a la pagina de movimientos
         }
       } catch (error) {
-        console.error('Error retire staking:', error);
+        const transactionHash = error?.transactionHash || error?.receipt?.transactionHash || null;
+        if (transactionHash) {
+            let url = `https://amoy.polygonscan.com/tx/${transactionHash}`;
+            window.open(url, '_blank');
+        }
+        console.log(error);
       }
     }
   };

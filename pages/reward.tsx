@@ -103,7 +103,12 @@ const Reward: React.FC = () => {
         const rewardClaim = await claimReward(index);
         fetchPurchases()
       } catch (error) {
-        console.error('Error fetching balances:', error);
+        const transactionHash = error?.transactionHash || error?.receipt?.transactionHash || null;
+        if (transactionHash) {
+            let url = `https://amoy.polygonscan.com/tx/${transactionHash}`;
+            window.open(url, '_blank');
+        }
+        console.log(error);
       }
     }
   };
